@@ -73,7 +73,7 @@ void setup() {
   Serial.print(":");
   Serial.println(port);
   Serial.println("Under Linux for listener: netcat -u -p 16500 -l | play -t raw -r 16000 -b 16 -c 2 -e signed-integer -");
-  Serial.println("Under Linux for recorder: netcat -u -p 16500 -l | play -t raw -r 16000 -b 16 -c 2 -e signed-integer - file.mp3");
+  Serial.println("Under Linux for recorder: netcat -u -p 16500 -l | rec -t raw -r 16000 -b 16 -c 2 -e signed-integer - file.mp3");
   udp.beginPacket(listener, port);
   udp.write("I2S Receiver\r\n");
   udp.endPacket();

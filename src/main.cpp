@@ -39,11 +39,12 @@ const char *SSID = STASSID;
 const char *PASS = STAPSK;
 
 WiFiUDP udp;
-// Set your listener PC's IP here in according with your DHCP network. In my case is 192.168.1.40:
-const IPAddress listener = { 192, 168, 1, 40 };
+// Set your listener PC's IP here according to your DHCP network.
+// In my case: 192.168.1.40
+const IPAddress listener(192, 168, 1, 40);
 const int port = 16500;
 
-int16_t buffer[100][2]; // Determine the Sampling time
+int16_t buffer[100][2]; // 100 stereo samples (100 frames of 2 channels)
 
 void setup() {
   Serial.begin(115200);
@@ -74,6 +75,8 @@ void setup() {
   Serial.println(port);
   Serial.println("Under Linux for listener: netcat -u -p 16500 -l | play -t raw -r 16000 -b 16 -c 2 -e signed-integer -");
   Serial.println("Under Linux for recorder: netcat -u -p 16500 -l | rec -t raw -r 16000 -b 16 -c 2 -e signed-integer - file.mp3");
+  // Bind UDP to a local port so the socket is ready for send/receive
+  udp.begin(port);
   udp.beginPacket(listener, port);
   udp.write("I2S Receiver\r\n");
   udp.endPacket();

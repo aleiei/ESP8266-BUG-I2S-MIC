@@ -1,47 +1,112 @@
 # ESP8266-BUG-I2S-MIC
 
-## Very simple bug with ESP8266 and I2S MEMS microphone for listening and recording Audio via UDP.
+Simple project for live audio streaming and recording from an I2S MEMS microphone (INMP441) over UDP, using an ESP8266 (NodeMCU). The ESP8266 reads stereo audio samples from the microphone via I2S and transmits them as raw UDP packets to a listener PC on the local network.
 
+The `main.cpp` file in the `src` folder is written for PlatformIO. To use it with the Arduino IDE, rename the file from `.cpp` to `.ino` and remove the line `#include <Arduino.h>`.
 
-The main.cpp file in the src folder was written for PlatformIO, but it is possible to convert it for Arduino IDE.
+---
 
-You just need to change the file extension from cpp to ino and delete "#include <Arduino.h>".
+## Wiring
 
-The project is very simple and requires only a few connections.
+![Connection diagram](images/ESP8266_I2S_MEMS.png)
 
-#### Below you can find the connection diagram for NodeMCU.
+![NodeMCU](images/ESP8266-NodeMCU-Amica-V2.jpg)
 
-![Diagram](images/ESP8266_I2S_MEMS.png)
+![INMP441](images/inmp441.jpg)
 
+---
 
-![NodeMCU](/images/ESP8266-NodeMCU-Amica-V2.jpg)
+## Dependencies
 
+- `ESP8266WiFi.h` — Wi-Fi connectivity
+- `WiFiUdp.h` — UDP socket
+- `I2S.h` — I2S peripheral driver for ESP8266
 
-![INMP441](/images/inmp441.jpg)
+---
 
+## Configuration
 
-You needs a UDP listener like netcat on port 16500 ( in according with sketch ) on listener PC.
+Before flashing, edit the following values in `main.cpp`.
 
-The command to run on the Linux terminal for live audio streaming is:
+Wi-Fi credentials:
 
-### "netcat -u -p 16500 -l | play -t raw -r 16000 -b 16 -c 2 -e signed-integer -" without quotes !
-#### you can also use this instruction instead of the previous one
-### "netcat -u -p 16500 -l | play -t s16 -r 16000 -c 2 -" without quotes !
-You needs a SoX utility with mp3 handler for Recorder
+```cpp
+#define STASSID "YOUR_SSID"
+#define STAPSK  "YOUR_PASS"
+```
 
-Under Linux for recorder (give for file.mp3 the name you prefer).
+IP address of the listener PC (must match your DHCP network):
 
-The command to run on the Linux terminal for rec audio streaming is:
+```cpp
+const IPAddress listener(192, 168, 1, 40);
+```
 
-### "netcat -u -p 16500 -l | rec -t raw -r 16000 -b 16 -c 2 -e signed-integer - file.mp3" without quotes !
-#### you can also use this instruction instead of the previous one
-### "netcat -u -p 16500 -l | rec -t s16 -r 16000 -c 2 - file.mp3" without quotes !
+UDP port (default: 16500):
 
-#### Set your listener PC's IP here in according with your DHCP network. In my case is 192.168.1.40:
-##### const IPAddress listener = { 192, 168, 1, 40 };
+```cpp
+const int port = 16500;
+```
 
-#### Set the UDP port you prefer. In my case:
-##### const int port = 16500;
+---
 
+## How it works
 
+After connecting to Wi-Fi, the sketch initialises the I2S peripheral in receive-only mode at a sample rate of 16000 Hz. In the main loop, 100 stereo 16-bit samples are read from the microphone into a buffer of 400 bytes and sent as a single UDP packet to the listener address. The packet size is intentionally kept below the LWIP v2 TCP_MSS limit of 500 bytes. A counter is printed to the serial monitor every 100 packets as a basic activity indicator.
 
+Audio format: raw PCM, 16000 Hz, 16-bit signed integer, 2 channels (stereo).
+
+---
+
+## Requirements
+
+A UDP listener on the receiving PC is required. Install [SoX](https://sox.sourceforge.net/) with MP3 handler support for recording.
+
+---
+
+## Usage
+
+All commands below assume the default port `16500`. Replace the IP and port if you changed them in the sketch. The listener command must be started on the PC before the ESP8266 begins transmitting.
+
+### Live audio streaming (Linux)
+
+```bash
+netcat -u -p 16500 -l | play -t raw -r 16000 -b 16 -c 2 -e signed-integer -
+```
+
+Alternative shorthand:
+
+```bash
+netcat -u -p 16500 -l | play -t s16 -r 16000 -c 2 -
+```
+
+### Record to file (Linux)
+
+Replace `file.mp3` with your preferred filename. SoX with MP3 handler is required.
+
+```bash
+netcat -u -p 16500 -l | rec -t raw -r 16000 -b 16 -c 2 -e signed-integer - file.mp3
+```
+
+Alternative shorthand:
+
+```bash
+netcat -u -p 16500 -l | rec -t s16 -r 16000 -c 2 - file.mp3
+```
+
+### Serial monitor
+
+While running, the sketch prints a dot for each Wi-Fi connection attempt and logs the assigned IP address. Once streaming starts, the packet counter is printed every 100 packets:
+
+```
+Connecting to YOUR_SSID
+.....
+WiFi connected
+My IP: 192.168.1.xx
+Start the listener on 192.168.1.40:16500
+```
+
+---
+
+## License
+
+MIT License — Copyright (c) 2021 Alessandro Orlando.

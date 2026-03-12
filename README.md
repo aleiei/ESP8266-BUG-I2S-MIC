@@ -1,6 +1,6 @@
 # ESP8266-BUG-I2S-MIC
 
-Simple project for live audio streaming and recording from an I2S MEMS microphone (INMP441) over UDP, using an ESP8266 (NodeMCU). The ESP8266 reads stereo audio samples from the microphone via I2S and transmits them as raw UDP packets to a listener PC on the local network.
+Simple project for live audio streaming and recording from an I2S MEMS microphone (INMP441) over UDP, using an ESP8266 (NodeMCU). The ESP8266 reads stereo 16-bit samples from the microphone via I2S and transmits them as raw UDP packets to a listener PC on the local network.
 
 The `main.cpp` file in the `src` folder is written for PlatformIO. To use it with the Arduino IDE, rename the file from `.cpp` to `.ino` and remove the line `#include <Arduino.h>`.
 
@@ -19,7 +19,7 @@ The `main.cpp` file in the `src` folder is written for PlatformIO. To use it wit
 ## Dependencies
 
 - `ESP8266WiFi.h` — Wi-Fi connectivity
-- `WiFiUdp.h` — UDP socket
+- `WiFiUdp.h` — synchronous UDP socket
 - `I2S.h` — I2S peripheral driver for ESP8266
 
 ---
@@ -51,7 +51,9 @@ const int port = 16500;
 
 ## How it works
 
-After connecting to Wi-Fi, the sketch initialises the I2S peripheral in receive-only mode at a sample rate of 16000 Hz. In the main loop, 100 stereo 16-bit samples are read from the microphone into a buffer of 400 bytes and sent as a single UDP packet to the listener address. The packet size is intentionally kept below the LWIP v2 TCP_MSS limit of 500 bytes. A counter is printed to the serial monitor every 100 packets as a basic activity indicator.
+After connecting to Wi-Fi, the sketch initialises the I2S peripheral in receive-only mode (`i2s_rxtx_begin(true, false)`) at 16000 Hz. A small handshake packet containing the string `I2S Receiver` is sent to the listener address at startup to confirm connectivity.
+
+In the main loop, 100 stereo 16-bit samples are read synchronously into a fixed buffer of 100 × 2 × `int16_t` (400 bytes) using `i2s_read_sample()`. The entire buffer is then sent as a single UDP packet. The 400-byte packet size is intentionally kept below the LWIP v2 TCP_MSS limit of approximately 500 bytes to avoid fragmentation. A counter is printed to the serial monitor every 100 packets as a basic activity indicator.
 
 Audio format: raw PCM, 16000 Hz, 16-bit signed integer, 2 channels (stereo).
 
@@ -95,7 +97,7 @@ netcat -u -p 16500 -l | rec -t s16 -r 16000 -c 2 - file.mp3
 
 ### Serial monitor
 
-While running, the sketch prints a dot for each Wi-Fi connection attempt and logs the assigned IP address. Once streaming starts, the packet counter is printed every 100 packets:
+The sketch logs its startup sequence and connection status at 115200 baud:
 
 ```
 Connecting to YOUR_SSID
@@ -104,6 +106,8 @@ WiFi connected
 My IP: 192.168.1.xx
 Start the listener on 192.168.1.40:16500
 ```
+
+Once streaming, the packet counter is printed every 100 packets.
 
 ---
 

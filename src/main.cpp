@@ -16,9 +16,7 @@
    OR OTHER DEALINGS IN THE SOFTWARE.
    
    Description:
-   Simple I2S MEMS microphone Audio Streaming via UDP transmitter
-   Needs a UDP listener like netcat on port 16500 on listener PC
-   Needs a SoX with mp3 handler for Recorder
+   Simple Bug with I2S MEMS microphone and Audio Streaming via UDP
    Under Linux for listener:
    netcat -u -p 16500 -l | play -t raw -r 16000 -b 16 -c 2 -e signed-integer -
    Under Linux for recorder (give for file.mp3 the name you prefer) : 
@@ -39,17 +37,14 @@ const char *SSID = STASSID;
 const char *PASS = STAPSK;
 
 WiFiUDP udp;
-// Set your listener PC's IP here according to your DHCP network.
-// In my case: 192.168.1.40
 const IPAddress listener(192, 168, 1, 40);
 const int port = 16500;
 
-int16_t buffer[100][2]; // 100 stereo samples (100 frames of 2 channels)
+int16_t buffer[100][2];
 
 void setup() {
   Serial.begin(115200);
 
-  // Connect to WiFi network
   Serial.println();
   Serial.println();
   Serial.print("Connecting to ");
@@ -66,7 +61,7 @@ void setup() {
   Serial.print("My IP: ");
   Serial.println(WiFi.localIP());
 
-  i2s_rxtx_begin(true, false); // Enable I2S RX
+  i2s_rxtx_begin(true, false);
   i2s_set_rate(16000);
 
   Serial.print("\nStart the listener on ");
@@ -75,7 +70,6 @@ void setup() {
   Serial.println(port);
   Serial.println("Under Linux for listener: netcat -u -p 16500 -l | play -t raw -r 16000 -b 16 -c 2 -e signed-integer -");
   Serial.println("Under Linux for recorder: netcat -u -p 16500 -l | rec -t raw -r 16000 -b 16 -c 2 -e signed-integer - file.mp3");
-  // Bind UDP to a local port so the socket is ready for send/receive
   udp.begin(port);
   udp.beginPacket(listener, port);
   udp.write("I2S Receiver\r\n");
@@ -85,8 +79,6 @@ void setup() {
 
 void loop() {
   static int cnt = 0;
-  // Each loop will send 100 raw samples (400 bytes)
-  // UDP needs to be < TCP_MSS which can be 500 bytes in LWIP V2
   for (int i = 0; i < 100; i++) {
     i2s_read_sample(&buffer[i][0], &buffer[i][1], true);
   }
